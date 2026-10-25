@@ -1,10 +1,6 @@
-import streamlit as st
+import os
 import streamlit as st
 from google import genai
-
-# API Key सेट करना
-client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
-import os
 
 # 1. पेज सेटअप
 st.set_page_config(
@@ -13,7 +9,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# 2. साइडबार - आपकी फोटो और प्रोफाइल
+# 2. साइडबार - प्रोफाइल
 with st.sidebar:
     image_file = None
     for filename in ["profile.jpg", "profile.jpeg", "profile.png", "profile.JPG", "profile.PNG"]:
@@ -38,7 +34,7 @@ with st.sidebar:
     ### 🛠️ Project Details
     - **Bot:** CUSB Campus Assistant
     - **Tech Stack:** Python, Streamlit, Google Gemini AI
-    - **Model:** gemini-3.5-flash-lite
+    - **Model:** gemini-2.5-flash
     
     ---
     *Built with ❤️ for CUSB Campus Community.*
@@ -51,9 +47,9 @@ st.markdown("##### *Central University of South Bihar (CUSB) के लिए AI
 st.markdown("**Developed by Ravi Arya** | Department of Computer Science, CUSB")
 st.divider()
 
-# 4. API Key कॉन्फ़िगरेशन
-GEMINI_API_KEY = "AQ.Ab8RN6Ixv-owdQ41AD1NpI-oxrctKtd7yQo6b_BI_H1pdOur9Q"
-genai.configure(api_key=GEMINI_API_KEY)
+# 4. Google GenAI Client सेटअप (AQ टोकन सपोर्टेड)
+api_key = st.secrets.get("GEMINI_API_KEY", "AQ.Ab8RN6Ixv-owdQ41AD1NpI-oxrctKtd7yQo6b_BI_H1pdOur9Q")
+client = genai.Client(api_key=api_key)
 
 # 5. CUSB डेटा लोड करें
 try:
@@ -62,10 +58,7 @@ try:
 except Exception:
     cusb_context = "Central University of South Bihar (CUSB), SH-7, Gaya-Panchanpur Road, Gaya, Bihar - 824236."
 
-# 6. मॉडल इनिशियलाइज़ेशन
-model = genai.GenerativeModel("gemini-3.5-flash-lite")
-
-# 7. चैट हिस्ट्री
+# 6. चैट हिस्ट्री
 if "messages" not in st.session_state:
     st.session_state.messages = [
         {
@@ -79,7 +72,7 @@ for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.write(msg["content"])
 
-# 8. यूज़र इनपुट और रिस्पॉन्स
+# 7. यूज़र इनपुट और रिस्पॉन्स
 prompt = st.chat_input("अपना सवाल यहाँ लिखें (उदा. M.Sc CS फीस, गया जंक्शन से दूरी, हॉस्टल)...")
 if prompt:
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -98,7 +91,10 @@ if prompt:
                 f"use your general knowledge about CUSB to give an accurate and helpful answer. Do not give incomplete or one-line empty answers."
             )
             try:
-                response = model.generate_content(full_prompt)
+                response = client.models.generate_content(
+                    model="gemini-2.5-flash",
+                    contents=full_prompt
+                )
                 reply = response.text
                 st.write(reply)
                 st.session_state.messages.append({"role": "assistant", "content": reply})
