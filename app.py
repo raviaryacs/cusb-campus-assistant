@@ -10,7 +10,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# 2. साइडबार - प्रोफाइल
+# 2. साइडबार - आपकी फोटो और प्रोफाइल
 with st.sidebar:
     image_file = None
     for filename in ["profile.jpg", "profile.jpeg", "profile.png", "profile.JPG", "profile.PNG"]:
@@ -34,8 +34,8 @@ with st.sidebar:
     ---
     ### 🛠️ Project Details
     - **Bot:** CUSB Campus Assistant
-    - **Tech Stack:** Python, Streamlit, Google Gemini AI
-    - **Model:** gemini-3.8-flash
+    - **Tech Stack:** Python, Streamlit, Google GenAI SDK
+    - **Model:** gemini-3.5-flash-lite
     
     ---
     *Built with ❤️ for CUSB Campus Community.*
@@ -48,7 +48,7 @@ st.markdown("##### *Central University of South Bihar (CUSB) के लिए AI
 st.markdown("**Developed by Ravi Arya** | Department of Computer Science, CUSB")
 st.divider()
 
-# 4. Google GenAI Client सेटअप
+# 4. Google GenAI Client सेटअप (AQ टोकन सपोर्टेड)
 api_key = st.secrets.get("GEMINI_API_KEY", "AQ.Ab8RN6Ixv-owdQ41AD1NpI-oxrctKtd7yQo6b_BI_H1pdOur9Q")
 client = genai.Client(api_key=api_key)
 
@@ -92,21 +92,21 @@ if prompt:
                 f"use your general knowledge about CUSB to give an accurate and helpful answer. Do not give incomplete or one-line empty answers."
             )
             
+            # सिर्फ एक्टिव मॉडल का उपयोग
+            max_retries = 3
             reply = None
-            # 503 Traffic Overload से बचने के लिए मॉडल लिस्ट (Fallback)
-            candidate_models = ["gemini-3.8-flash", "gemini-2.5-flash-lite"]
             
-            for mod in candidate_models:
+            for attempt in range(max_retries):
                 try:
                     response = client.models.generate_content(
-                        model=mod,
+                        model="gemini-3.5-flash-lite",
                         contents=full_prompt
                     )
                     reply = response.text
                     break
                 except Exception as e:
                     if "503" in str(e) or "UNAVAILABLE" in str(e):
-                        time.sleep(1)
+                        time.sleep(1.5)
                         continue
                     else:
                         st.error(f"Error: {e}")
@@ -115,5 +115,5 @@ if prompt:
             if reply:
                 st.write(reply)
                 st.session_state.messages.append({"role": "assistant", "content": reply})
-            elif not reply and "e" in locals():
-                st.warning("Google सर्वर पर अभी ट्रैफ़िक अधिक है, कृपया 5 सेकंड बाद दोबारा सवाल पूछें।")
+            elif not reply and "e" in locals() and ("503" in str(e) or "UNAVAILABLE" in str(e)):
+                st.warning("सर्वर पर ट्रैफ़िक अधिक है, कृपया कुछ सेकंड बाद पुनः प्रयास करें।")
