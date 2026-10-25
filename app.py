@@ -1,5 +1,9 @@
 import streamlit as st
-import google.generativeai as genai
+import streamlit as st
+from google import genai
+
+# API Key सेट करना
+client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 import os
 
 # 1. पेज सेटअप
