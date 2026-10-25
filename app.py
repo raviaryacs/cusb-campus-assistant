@@ -1,4 +1,5 @@
 import os
+import time
 import streamlit as st
 from google import genai
 
@@ -34,7 +35,7 @@ with st.sidebar:
     ### 🛠️ Project Details
     - **Bot:** CUSB Campus Assistant
     - **Tech Stack:** Python, Streamlit, Google Gemini AI
-    - **Model:** gemini-2.5-flash
+    - **Model:** gemini-3.8-flash
     
     ---
     *Built with ❤️ for CUSB Campus Community.*
@@ -47,7 +48,7 @@ st.markdown("##### *Central University of South Bihar (CUSB) के लिए AI
 st.markdown("**Developed by Ravi Arya** | Department of Computer Science, CUSB")
 st.divider()
 
-# 4. Google GenAI Client सेटअप (AQ टोकन सपोर्टेड)
+# 4. Google GenAI Client सेटअप
 api_key = st.secrets.get("GEMINI_API_KEY", "AQ.Ab8RN6Ixv-owdQ41AD1NpI-oxrctKtd7yQo6b_BI_H1pdOur9Q")
 client = genai.Client(api_key=api_key)
 
@@ -90,13 +91,29 @@ if prompt:
                 f"Instructions: Use the context provided above. If specific information (like transit distances from Gaya Junction ~13-15 km or complete fee breakdown) is not in the context, "
                 f"use your general knowledge about CUSB to give an accurate and helpful answer. Do not give incomplete or one-line empty answers."
             )
-            try:
-                response = client.models.generate_content(
-                    model="gemini-3.8-flash",
-                    contents=full_prompt
-                )
-                reply = response.text
+            
+            reply = None
+            # 503 Traffic Overload से बचने के लिए मॉडल लिस्ट (Fallback)
+            candidate_models = ["gemini-3.8-flash", "gemini-2.5-flash-lite"]
+            
+            for mod in candidate_models:
+                try:
+                    response = client.models.generate_content(
+                        model=mod,
+                        contents=full_prompt
+                    )
+                    reply = response.text
+                    break
+                except Exception as e:
+                    if "503" in str(e) or "UNAVAILABLE" in str(e):
+                        time.sleep(1)
+                        continue
+                    else:
+                        st.error(f"Error: {e}")
+                        break
+            
+            if reply:
                 st.write(reply)
                 st.session_state.messages.append({"role": "assistant", "content": reply})
-            except Exception as e:
-                st.error(f"Error: {e}")
+            elif not reply and "e" in locals():
+                st.warning("Google सर्वर पर अभी ट्रैफ़िक अधिक है, कृपया 5 सेकंड बाद दोबारा सवाल पूछें।")
